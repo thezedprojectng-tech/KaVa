@@ -116,7 +116,8 @@ export function SectionBRoster({
       {/* Roster Table */}
       {women.length > 0 ? (
         <div className="border border-border rounded-xl bg-card overflow-hidden shadow-xs">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[580px]">
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead className="font-mono text-xs">#</TableHead>
@@ -181,6 +182,7 @@ export function SectionBRoster({
               })}
             </TableBody>
           </Table>
+          </div>
         </div>
       ) : (
         <div className="p-8 text-center rounded-xl border border-dashed border-border bg-card text-muted-foreground">

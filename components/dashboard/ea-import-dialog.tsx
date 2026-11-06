@@ -240,7 +240,7 @@ export function EaImportDialog({
           {/* Preview Table */}
           {rows.length > 0 ? (
             <div className="border border-border rounded-lg overflow-x-auto">
-              <Table>
+              <Table className="min-w-[650px]">
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead className="font-mono text-xs">Status</TableHead>

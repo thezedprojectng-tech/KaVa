@@ -155,7 +155,8 @@ export function ResponsesTableView({
       {/* Level 1: Households Table */}
       {activeTab === 'households' && (
         <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[720px]">
             <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur">
               <TableRow>
                 <TableHead className="font-mono text-xs">HH ID</TableHead>
@@ -194,13 +195,15 @@ export function ResponsesTableView({
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
       {/* Level 2: Women Table */}
       {activeTab === 'women' && (
         <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[700px]">
             <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur">
               <TableRow>
                 <TableHead className="font-mono text-xs">Woman ID</TableHead>
@@ -233,13 +236,15 @@ export function ResponsesTableView({
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
       {/* Level 2: Deaths Table */}
       {activeTab === 'deaths' && (
         <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[700px]">
             <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur">
               <TableRow>
                 <TableHead className="font-mono text-xs">Death #</TableHead>
@@ -284,13 +289,15 @@ export function ResponsesTableView({
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
       {/* Level 3: Pregnancies Table */}
       {activeTab === 'pregnancies' && (
         <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[720px]">
             <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur">
               <TableRow>
                 <TableHead className="font-mono text-xs">Pregnancy ID</TableHead>
@@ -325,13 +332,15 @@ export function ResponsesTableView({
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
       {/* Level 4: Babies Table */}
       {activeTab === 'babies' && (
         <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[700px]">
             <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur">
               <TableRow>
                 <TableHead className="font-mono text-xs">Baby #</TableHead>
@@ -372,6 +381,7 @@ export function ResponsesTableView({
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
     </div>

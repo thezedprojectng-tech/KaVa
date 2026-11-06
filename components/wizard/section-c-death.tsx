@@ -140,7 +140,8 @@ export function SectionCDeath({
 
           {deaths.length > 0 ? (
             <div className="border border-border rounded-xl bg-card overflow-hidden shadow-xs">
-              <Table>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[600px]">
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead className="font-mono text-xs">#</TableHead>
@@ -206,6 +207,7 @@ export function SectionCDeath({
                   })}
                 </TableBody>
               </Table>
+              </div>
             </div>
           ) : (
             <div className="p-6 text-center rounded-xl border border-dashed border-border bg-card text-muted-foreground text-xs">

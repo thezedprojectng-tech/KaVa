@@ -157,7 +157,8 @@ export function ReviewQueue({
 
       {/* Flags List Table */}
       <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-        <Table>
+        <div className="overflow-x-auto">
+          <Table className="min-w-[680px]">
           <TableHeader className="bg-muted/50 sticky top-0 backdrop-blur">
             <TableRow>
               <TableHead className="font-mono text-xs">Severity</TableHead>
@@ -225,12 +226,13 @@ export function ReviewQueue({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Resolve Modal */}
       {selectedFlag && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
+          <div className="bg-card border border-border rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
             <header className="border-b border-border pb-3 flex items-start justify-between">
               <div>
                 <h3 className="text-base font-semibold text-foreground">

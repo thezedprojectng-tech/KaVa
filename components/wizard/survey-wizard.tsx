@@ -792,17 +792,18 @@ export function SurveyWizard({
             )}
 
             {/* Submit CTA */}
-            <div className="pt-2 flex justify-end gap-3">
+            <div className="pt-2 flex flex-col sm:flex-row justify-end gap-3">
               <Button
                 variant="outline"
                 onClick={() => setCurrentStep(5)}
+                className="w-full sm:w-auto"
               >
                 Back to Section F
               </Button>
               <Button
                 disabled={isSubmitting}
                 onClick={handleFinalSubmit}
-                className="font-semibold px-6"
+                className="font-semibold px-6 w-full sm:w-auto"
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Household Assessment'}
               </Button>

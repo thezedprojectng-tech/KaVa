@@ -415,7 +415,8 @@ export function AdminUsersView({
             )}
           </div>
         ) : (
-          <Table>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[760px]">
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead className="font-mono text-xs">Staff Name</TableHead>
@@ -548,6 +549,7 @@ export function AdminUsersView({
               })}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
 
@@ -556,7 +558,7 @@ export function AdminUsersView({
       {/* ========================================================================= */}
       {isAddUserOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in-0">
-          <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-lg p-5 space-y-4">
+          <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <UserPlus className="size-4 text-primary" />
@@ -697,7 +699,7 @@ export function AdminUsersView({
       {/* ========================================================================= */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in-0">
-          <div className="w-full max-w-sm bg-card border border-border rounded-xl shadow-lg p-5 space-y-4">
+          <div className="w-full max-w-sm bg-card border border-border rounded-xl shadow-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Edit2 className="size-4 text-primary" />
@@ -779,7 +781,7 @@ export function AdminUsersView({
       {/* ========================================================================= */}
       {assigningUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in-0">
-          <div className="w-full max-w-lg bg-card border border-border rounded-xl shadow-lg p-5 space-y-4">
+          <div className="w-full max-w-lg bg-card border border-border rounded-xl shadow-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">

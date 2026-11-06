@@ -60,6 +60,7 @@ export function KanoEaWorkspace({
   const [selectedLga, setSelectedLga] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
 
   const [isDark, setIsDark] = useState(() =>
     typeof document === 'undefined'
@@ -121,6 +122,7 @@ export function KanoEaWorkspace({
   const handleSelectEa = (ea: EnumerationArea) => {
     setSelectedEa(ea);
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setMobileView('map');
       setMobileDrawerOpen(true);
     }
   };
@@ -164,24 +166,61 @@ export function KanoEaWorkspace({
             </Button>
           </div>
 
-          {/* Import EA Button */}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsImportOpen(true)}
-            className="text-xs gap-1.5"
-          >
-            <Upload className="size-3.5" />
-            <span>Import EAs</span>
-          </Button>
+          {/* Right Toolbar Controls: Mobile List/Map toggle + Import Button */}
+          <div className="flex items-center gap-2">
+            {activeTab === 'map' && (
+              <div className="flex md:hidden items-center p-0.5 rounded-lg bg-muted border border-border">
+                <button
+                  type="button"
+                  onClick={() => setMobileView('list')}
+                  className={cn(
+                    'px-2 py-1 rounded-md text-xs font-medium transition-colors',
+                    mobileView === 'list'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  List ({filteredEas.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileView('map')}
+                  className={cn(
+                    'px-2 py-1 rounded-md text-xs font-medium transition-colors',
+                    mobileView === 'map'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  Map
+                </button>
+              </div>
+            )}
+
+            {/* Import EA Button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsImportOpen(true)}
+              className="text-xs gap-1.5"
+            >
+              <Upload className="size-3.5" />
+              <span className="hidden sm:inline">Import EAs</span>
+            </Button>
+          </div>
         </header>
 
         {/* Tab 1: Browse & Map Layout */}
         {activeTab === 'map' && (
-          <div className="relative flex h-[620px] w-full min-h-0 overflow-hidden">
+          <div className="relative flex h-[580px] sm:h-[620px] lg:h-[660px] w-full min-h-0 overflow-hidden">
             {/* Left: Searchable EA List */}
-            <aside className="w-72 xl:w-80 shrink-0 border-r border-border flex flex-col bg-background min-h-0">
+            <aside
+              className={cn(
+                'w-full md:w-72 xl:w-80 shrink-0 border-r border-border flex-col bg-background min-h-0',
+                mobileView === 'list' ? 'flex' : 'hidden md:flex'
+              )}
+            >
               {/* Search & Filters */}
               <div className="p-3 border-b border-border space-y-2.5">
                 <div className="relative">
@@ -289,13 +328,32 @@ export function KanoEaWorkspace({
             </aside>
 
             {/* Center: MapLibre Basemap */}
-            <main className="flex-1 min-w-0 relative h-full">
+            <main
+              className={cn(
+                'flex-1 min-w-0 relative h-full',
+                mobileView === 'map' ? 'flex flex-col' : 'hidden md:flex flex-col'
+              )}
+            >
               <KanoMap
                 eas={filteredEas}
                 selectedEa={selectedEa}
                 onSelectEa={handleSelectEa}
                 isDark={isDark}
               />
+
+              {/* Floating Return to List button for mobile */}
+              <div className="absolute top-3 right-3 z-10 md:hidden pointer-events-auto">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setMobileView('list')}
+                  className="h-8 gap-1.5 text-xs font-mono shadow-md backdrop-blur bg-background/90 hover:bg-background border border-border"
+                >
+                  <Search className="size-3.5 text-primary" />
+                  <span>List ({filteredEas.length})</span>
+                </Button>
+              </div>
             </main>
 
             {/* Right: Desktop EA Details Panel (Side-by-side, does NOT cover pins) */}

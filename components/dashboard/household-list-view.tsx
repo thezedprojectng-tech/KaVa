@@ -85,7 +85,8 @@ export function HouseholdListView({
 
       {/* Household Table */}
       <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-        <Table>
+        <div className="overflow-x-auto">
+          <Table className="min-w-[640px]">
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="font-mono text-xs">Sample Line</TableHead>
@@ -150,6 +151,7 @@ export function HouseholdListView({
             })}
           </TableBody>
         </Table>
+        </div>
       </div>
     </div>
   );
