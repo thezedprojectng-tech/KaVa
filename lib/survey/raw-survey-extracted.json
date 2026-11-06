@@ -1,0 +1,842 @@
+{
+  "version": "1.0.0",
+  "title": "KASSEP Household Pregnancy and Outcome Assessment",
+  "organization": "Doctors Medical Aid Foundation (DMAF)",
+  "referencePeriod": {
+    "start": "2024-08-01",
+    "end": "2026-07-31",
+    "phase1": "Aug 2024 – Jul 2025",
+    "phase2": "Aug 2025 – Jul 2026"
+  },
+  "contact": {
+    "name": "Amina Sabu",
+    "phone": "08144435403"
+  },
+  "sections": [
+    {
+      "code": "A",
+      "title": "Household ID, Eligibility & Consent",
+      "level": "household",
+      "sheetName": "A Household ID & Consent",
+      "infoBlocks": [
+        "Read household consent",
+        "Hello. My name is [NAME], and I am working with Doctors Medical Aid Foundation (DMAF). We are assessing how pregnancies, births, and deaths were recorded in this community between August 2024 and July 2026.",
+        "I would first like to ask who lived in this household during that time. We may then invite eligible women to answer a short questionnaire privately. We may also ask about household members who died. With permission, selected details will be compared with surveillance records.",
+        "Participation is voluntary. You may decline any question or stop the interview. Your decision will not affect any services or benefits. Information will be kept confidential and reported without identifying you.",
+        "If you have questions, you may contact Amina Sabu on 08144435403. May I continue?",
+        "Respondent: An adult household member knowledgeable about household membership during the reference period."
+      ],
+      "items": [
+        {
+          "no": "A01",
+          "variable": "interviewer_id",
+          "label": "Interviewer identification",
+          "responseCoding": "Assigned code",
+          "instructions": "Required"
+        },
+        {
+          "no": "A02",
+          "variable": "interview_date",
+          "label": "Interview date",
+          "responseCoding": "Automatic",
+          "instructions": "Record start/end times automatically"
+        },
+        {
+          "no": "A03",
+          "variable": "lga_code",
+          "label": "LGA",
+          "responseCoding": "Approved list",
+          "instructions": "Preload from sample"
+        },
+        {
+          "no": "A04",
+          "variable": "ward_code",
+          "label": "Ward",
+          "responseCoding": "Approved list",
+          "instructions": "Preload where available"
+        },
+        {
+          "no": "A05",
+          "variable": "community",
+          "label": "Community/settlement",
+          "responseCoding": "Text/list",
+          "instructions": "Confirm location"
+        },
+        {
+          "no": "A06",
+          "variable": "ea_id",
+          "label": "Enumeration area ID",
+          "responseCoding": "Assigned code",
+          "instructions": "Preload; no unauthorised changes"
+        },
+        {
+          "no": "A07",
+          "variable": "segment_id",
+          "label": "Segment ID",
+          "responseCoding": "Assigned code/not applicable",
+          "instructions": "From sampling record"
+        },
+        {
+          "no": "A08",
+          "variable": "assessment_hh_id",
+          "label": "Assessment household ID",
+          "responseCoding": "Assigned unique code",
+          "instructions": "Must not depend on a KASSEP record existing"
+        },
+        {
+          "no": "A09",
+          "variable": "hh_head_name",
+          "label": "Household head’s name",
+          "responseCoding": "Text",
+          "instructions": "Restricted linkage field"
+        },
+        {
+          "no": "A10",
+          "variable": "visit_number",
+          "label": "Visit attempt",
+          "responseCoding": "1 First; 2 Second; 3 Subsequent",
+          "instructions": "Retain attempt history"
+        },
+        {
+          "no": "A11",
+          "variable": "visit_result",
+          "label": "Household visit result",
+          "responseCoding": "1 Located, respondent available;\n2 Located, nobody available;\n3 Respondent unavailable;\n4 Not located;\n5 Dwelling vacant;\n6 Household moved/dissolved;\n7 Other",
+          "instructions": "If 2–7, record explanation and arrange supervisor-directed follow-up; do not assume household ineligible"
+        },
+        {
+          "no": "A12",
+          "variable": "hh_respondent_name",
+          "label": "Respondent’s name",
+          "responseCoding": "Text",
+          "instructions": "Restricted linkage field"
+        },
+        {
+          "no": "A13",
+          "variable": "hh_respondent_relationship",
+          "label": "Relationship to household head",
+          "responseCoding": "1 Head;\n2 Spouse/partner;\n3 Daughter/son;\n4 Other relative;\n5 Other household member",
+          "instructions": "Respondent must meet approved consent requirements"
+        },
+        {
+          "no": "A14",
+          "variable": "hh_consent",
+          "label": "Household respondent consents?",
+          "responseCoding": "1 Yes; 0 No",
+          "instructions": "No → close respectfully"
+        },
+        {
+          "no": "A15",
+          "variable": "hh_reference_residence",
+          "label": "Did this household exist here, or did any of its members live here, at any time between 1 August 2024 and 31 July 2026?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown",
+          "instructions": "No → document and refer for eligibility review; unknown → continue cautiously"
+        },
+        {
+          "no": "A16",
+          "variable": "hh_residence_start",
+          "label": "When did this household begin living here?",
+          "responseCoding": "Month/year; before reference period; unknown",
+          "instructions": "Ask if relevant to eligibility"
+        },
+        {
+          "no": "A17",
+          "variable": "hh_contact_permission",
+          "label": "May the assessment team contact you again if information needs clarification?",
+          "responseCoding": "1 Yes; 0 No",
+          "instructions": "Optional; refusal does not end interview"
+        },
+        {
+          "no": "A18",
+          "variable": "hh_contact",
+          "label": "Preferred contact number",
+          "responseCoding": "Text",
+          "instructions": "Ask only if A17=1; restricted field"
+        },
+        {
+          "no": "A19",
+          "variable": "hh_total_members",
+          "label": "Total number of household members (including the household head)",
+          "responseCoding": "Count; unknown",
+          "instructions": "Include all usual members, including the household head"
+        },
+        {
+          "no": "A20",
+          "variable": "hh_total_women",
+          "label": "Total number of women in the household",
+          "responseCoding": "Count; unknown",
+          "instructions": "All female household members, any age"
+        },
+        {
+          "no": "A21",
+          "variable": "hh_eligible_women",
+          "label": "Total number of eligible women in the household",
+          "responseCoding": "Count; unknown",
+          "instructions": "Women/girls aged 15–49 at any point between 1 Aug 2024 and 31 Jul 2026, incl. those who moved away or died; must match roster count in Section B"
+        }
+      ]
+    },
+    {
+      "code": "B",
+      "title": "Focused Female Roster",
+      "level": "woman",
+      "sheetName": "B Female Roster",
+      "infoBlocks": [
+        "Opening question",
+        "C1_roster_count How many women or girls lived in this household at any time between 1 August 2024 and 31 July 2026 and were aged 15–49 at any point during that period? Include those who have since moved away or died.",
+        "Loop per number of women depending on roster count."
+      ],
+      "items": [
+        {
+          "no": "",
+          "variable": "woman_line",
+          "label": "Woman’s roster line number",
+          "responseCoding": "Automatic",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "woman_name",
+          "label": "Name/linkage identifier",
+          "responseCoding": "Restricted text",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "woman_dob",
+          "label": "Date of birth, if known",
+          "responseCoding": "Date or partial date",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "woman_age",
+          "label": "Current age; if deceased, age at death",
+          "responseCoding": "Completed years; unknown",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "age_basis",
+          "label": "Basis of age",
+          "responseCoding": "1 Known date of birth;\n2 Reported age;\n3 Estimated;\n8 Unknown",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "relationship_head",
+          "label": "Relationship to household head",
+          "responseCoding": "1 Head;\n2 Wife/partner;\n3 Daughter;\n4 Sister;\n5 Mother;\n6 Daughter-in-law;\n7 Other relative;\n8 Non-relative",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "residence_status",
+          "label": "Current status",
+          "responseCoding": "1 Current resident;\n2 Moved away;\n3 Deceased",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "residence_start",
+          "label": "When did she begin living here?",
+          "responseCoding": "Month/year; before reference period; unknown",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "residence_end",
+          "label": "When did she leave or die?",
+          "responseCoding": "Month/year; unknown; not applicable",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "reference_age_eligible",
+          "label": "Was she aged 15–49 at any point during the reference period?",
+          "responseCoding": "1 Yes; 0 No; 8 Uncertain",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "available_direct",
+          "label": "Available for a direct private interview?",
+          "responseCoding": "1 Now;\n2 At a revisit;\n3 Unavailable;\n4 Deceased;\n5 Declines",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "woman_interview_status",
+          "label": "Individual interview outcome",
+          "responseCoding": "1 Complete;\n2 Partial;\n3 Revisit needed;\n4 Proxy completed;\n5 Refused;\n6 Unavailable;\n7 No knowledgeable respondent",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "C2_roster_count_validation Have we included every eligible woman or girl, including daughters, unmarried women, other relatives, and anyone who moved away or died?",
+          "label": "",
+          "responseCoding": "",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "Routing",
+          "label": "",
+          "responseCoding": "",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "Eligible and available → Section D.",
+          "label": "",
+          "responseCoding": "",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "Eligible but unavailable → arrange revisit; use an appropriate proxy only under the agreed protocol.",
+          "label": "",
+          "responseCoding": "",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "Deceased → Section C and, where appropriate, proxy pregnancy-history questions.",
+          "label": "",
+          "responseCoding": "",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "Uncertain age/residence eligibility → retain information for supervisor review rather than automatically excluding.",
+          "label": "",
+          "responseCoding": "",
+          "instructions": ""
+        },
+        {
+          "no": "",
+          "variable": "Do not collect sex repeatedly in this female-only roster.",
+          "label": "",
+          "responseCoding": "",
+          "instructions": ""
+        }
+      ]
+    },
+    {
+      "code": "C1",
+      "title": "Household Death Screen",
+      "level": "household",
+      "sheetName": "C1 Death Screen",
+      "infoBlocks": [
+        "Ask every consenting household, including those with no women on the roster.",
+        "Between 1 August 2024 and 31 July 2026, did anyone who belonged to this household die, including a baby who lived only briefly?"
+      ],
+      "items": [
+        {
+          "no": "C01",
+          "variable": "any_death",
+          "label": "Any household death during the reference period?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": "Yes → death roster; otherwise Section D"
+        }
+      ]
+    },
+    {
+      "code": "C2",
+      "title": "Death Roster",
+      "level": "death",
+      "sheetName": "C2 Death Roster",
+      "infoBlocks": [
+        "Repeat for each reported death:"
+      ],
+      "items": [
+        {
+          "no": "C02",
+          "variable": "death_line",
+          "label": "Death record number",
+          "responseCoding": "Automatic",
+          "instructions": "Link to woman/pregnancy record where applicable"
+        },
+        {
+          "no": "C03",
+          "variable": "deceased_name",
+          "label": "Name/linkage identifier",
+          "responseCoding": "Restricted text",
+          "instructions": "Do not duplicate an existing death record"
+        },
+        {
+          "no": "C04",
+          "variable": "deceased_sex",
+          "label": "Sex",
+          "responseCoding": "1 Female; 2 Male; 8 Unknown",
+          "instructions": ""
+        },
+        {
+          "no": "C05",
+          "variable": "age_at_death",
+          "label": "Age at death",
+          "responseCoding": "Number + unit: days/months/years; unknown",
+          "instructions": "Permit age 0 days"
+        },
+        {
+          "no": "C06",
+          "variable": "death_date",
+          "label": "When did the death occur?",
+          "responseCoding": "Exact/partial date; unknown",
+          "instructions": "Record date certainty"
+        },
+        {
+          "no": "C07",
+          "variable": "death_residence",
+          "label": "Was this person a household member when they died?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown",
+          "instructions": "Record where resident if no"
+        },
+        {
+          "no": "C08",
+          "variable": "pregnant_at_death",
+          "label": "Was she pregnant when she died?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": "Ask for female deaths potentially within reproductive ages"
+        },
+        {
+          "no": "C09",
+          "variable": "recent_pregnancy_end",
+          "label": "Did a pregnancy end during the six weeks before she died, whether through childbirth, miscarriage or another pregnancy loss?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": "Ask if C08≠1"
+        },
+        {
+          "no": "C10",
+          "variable": "death_followup",
+          "label": "Mortality-verification referral required?",
+          "responseCoding": "Automatic/manual flag",
+          "instructions": "Yes if C08=1, C09=1, or pregnancy relationship remains uncertain"
+        }
+      ]
+    },
+    {
+      "code": "D1",
+      "title": "Respondent & Privacy",
+      "level": "woman",
+      "sheetName": "D1 Respondent",
+      "infoBlocks": [
+        "Repeat for each eligible woman.",
+        "D1. Respondent and consent"
+      ],
+      "items": [
+        {
+          "no": "D01",
+          "variable": "woman_id",
+          "label": "Woman’s roster ID",
+          "responseCoding": "Preloaded",
+          "instructions": ""
+        },
+        {
+          "no": "D02",
+          "variable": "response_type",
+          "label": "Interview type",
+          "responseCoding": "1 Woman herself;\n2 Proxy—woman unavailable;\n3 Proxy—woman deceased",
+          "instructions": "Direct interview preferred"
+        },
+        {
+          "no": "D03",
+          "variable": "proxy_relationship",
+          "label": "Proxy’s relationship to woman",
+          "responseCoding": "1 Spouse;\n2 Mother/father;\n3 Sister/brother;\n4 Other relative;\n5 Other knowledgeable person",
+          "instructions": "If proxy"
+        },
+        {
+          "no": "D04",
+          "variable": "proxy_reason",
+          "label": "Reason direct interview unavailable",
+          "responseCoding": "1 Temporarily absent;\n2 Moved away;\n3 Too ill;\n4 Deceased;\n5 Other",
+          "instructions": "Do not use proxy to bypass refusal"
+        },
+        {
+          "no": "D05",
+          "variable": "privacy",
+          "label": "Privacy adequate to proceed?",
+          "responseCoding": "1 Yes; 0 No",
+          "instructions": "No → seek private setting/revisit"
+        }
+      ]
+    },
+    {
+      "code": "D1_Consent",
+      "title": "Individual Consent",
+      "level": "woman",
+      "sheetName": "D1 Individual Consent",
+      "infoBlocks": [
+        "Read individual consent",
+        "We are assessing whether pregnancies and their outcomes were recorded correctly between August 2024 and July 2026. I would like to ask about pregnancies during that period and whether anyone contacted you to monitor them. Some questions concern pregnancy losses or deaths. You may skip any question or stop at any time. With your permission, selected details will later be compared with surveillance records. Your answers will be kept confidential. May I continue?",
+        "For proxies, adapt pronouns and explain that only information they know should be provided. Apply separate approved assent/permission procedures where needed."
+      ],
+      "items": [
+        {
+          "no": "D06",
+          "variable": "individual_consent",
+          "label": "Appropriate individual/proxy consent obtained?",
+          "responseCoding": "1 Yes; 0 No",
+          "instructions": "No → close individual interview"
+        }
+      ]
+    },
+    {
+      "code": "D2",
+      "title": "Pregnancy Screening",
+      "level": "woman",
+      "sheetName": "D2 Pregnancy Screening",
+      "infoBlocks": [
+        "D2. Pregnancy screening"
+      ],
+      "items": [
+        {
+          "no": "D07",
+          "variable": "pregnancy_any",
+          "label": "Between 1 August 2024 and 31 July 2026, were you pregnant at any time? Include a pregnancy that began before August 2024 but continued into the period.",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": "Ask D08–D09 as completeness checks"
+        },
+        {
+          "no": "D08",
+          "variable": "pregnancy_loss_probe",
+          "label": "During that period, was there any pregnancy that ended before delivery, including a miscarriage or another pregnancy loss?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": ""
+        },
+        {
+          "no": "D09",
+          "variable": "birth_probe",
+          "label": "During that period, did you give birth, including to a baby born without signs of life or a baby who died soon after birth?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": ""
+        },
+        {
+          "no": "D10",
+          "variable": "pregnancy_number",
+          "label": "Altogether, how many different pregnancies overlapped that period? Count twins or other multiple births as one pregnancy.",
+          "responseCoding": "Count; unknown; declined",
+          "instructions": "Any yes → create episodes; all no → close individual interview"
+        }
+      ]
+    },
+    {
+      "code": "E1",
+      "title": "Pregnancy Timing & Outcome",
+      "level": "pregnancy",
+      "sheetName": "E1 Timing & Outcome",
+      "infoBlocks": [
+        "Repeat for each pregnancy overlapping the reference period.",
+        "I will ask a few questions about each pregnancy, beginning with the most recent.",
+        "E1. Timing, residence and outcome"
+      ],
+      "items": [
+        {
+          "no": "E01",
+          "variable": "pregnancy_id",
+          "label": "Pregnancy episode ID",
+          "responseCoding": "Automatic: household–woman–episode",
+          "instructions": ""
+        },
+        {
+          "no": "E02",
+          "variable": "pregnancy_start",
+          "label": "Around what month and year did this pregnancy begin?",
+          "responseCoding": "Month/year; unknown",
+          "instructions": "An estimate is acceptable"
+        },
+        {
+          "no": "E03",
+          "variable": "pregnancy_status_cutoff",
+          "label": "By 31 July 2026, had this pregnancy ended, or was it still ongoing?",
+          "responseCoding": "1 Ended;\n2 Ongoing;\n8 Unknown;\n9 Declined",
+          "instructions": ""
+        },
+        {
+          "no": "E04",
+          "variable": "pregnancy_current_status",
+          "label": "Has this pregnancy ended since then?",
+          "responseCoding": "1 Yes;\n0 Still ongoing;\n8 Unknown;\n9 Declined",
+          "instructions": "Ask if E03=2/8"
+        },
+        {
+          "no": "E05",
+          "variable": "pregnancy_end_date",
+          "label": "When did the pregnancy end?",
+          "responseCoding": "Exact/partial date; unknown",
+          "instructions": "Ask for all ended pregnancies, not only live births"
+        },
+        {
+          "no": "E06",
+          "variable": "date_certainty",
+          "label": "Date certainty",
+          "responseCoding": "1 Exact;\n2 Month/year only;\n3 Approximate period;\n8 Unknown",
+          "instructions": "Do not force exact dates"
+        },
+        {
+          "no": "E07",
+          "variable": "gestation",
+          "label": "About how many weeks or months pregnant were you when it ended?",
+          "responseCoding": "Number + unit; unknown; declined",
+          "instructions": "Retain original unit"
+        },
+        {
+          "no": "E08",
+          "variable": "pregnancy_residence",
+          "label": "Where were you usually living during this pregnancy?",
+          "responseCoding": "1 This household throughout;\n2 Joined during pregnancy;\n3 Left during pregnancy;\n4 Elsewhere throughout;\n8 Unknown",
+          "instructions": "If changed, record approximate dates/location"
+        },
+        {
+          "no": "E09",
+          "variable": "outcome_residence",
+          "label": "Where were you usually living when the pregnancy ended?",
+          "responseCoding": "1 This household;\n2 Elsewhere in EA;\n3 Outside EA;\n8 Unknown",
+          "instructions": "Residence—not delivery location"
+        },
+        {
+          "no": "E10",
+          "variable": "outcome_type",
+          "label": "How did this pregnancy end?",
+          "responseCoding": "1 Birth of one or more babies;\n2 Pregnancy ended without a birth—reported miscarriage;\n3 Other pregnancy loss;\n4 Still ongoing;\n8 Uncertain;\n9 Declined",
+          "instructions": "Birth → E11; loss → E15"
+        },
+        {
+          "no": "E11",
+          "variable": "babies_number",
+          "label": "How many babies were born from this pregnancy?",
+          "responseCoding": "Count; unknown",
+          "instructions": "One baby record per baby"
+        },
+        {
+          "no": "E12",
+          "variable": "delivery_place",
+          "label": "Where did the birth occur?",
+          "responseCoding": "1 Home;\n2 Public facility;\n3 Private facility;\n4 Other;\n8 Unknown",
+          "instructions": "Optional facility name for linkage"
+        }
+      ]
+    },
+    {
+      "code": "E2",
+      "title": "Baby Record",
+      "level": "baby",
+      "sheetName": "E2 Baby Record",
+      "infoBlocks": [
+        "E2. Baby record",
+        "Repeat for every baby from the pregnancy."
+      ],
+      "items": [
+        {
+          "no": "E13a",
+          "variable": "baby_id",
+          "label": "Baby number within pregnancy",
+          "responseCoding": "Automatic",
+          "instructions": ""
+        },
+        {
+          "no": "E13b",
+          "variable": "baby_sex",
+          "label": "Baby’s sex",
+          "responseCoding": "1 Female; 2 Male; 8 Unknown",
+          "instructions": ""
+        },
+        {
+          "no": "E13c",
+          "variable": "signs_life",
+          "label": "After birth, did the baby show any sign of life—for example, breathing, crying or movement?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": "If no/unknown, ask clarification"
+        },
+        {
+          "no": "E13d",
+          "variable": "heartbeat_sign",
+          "label": "Was a heartbeat or pulsation of the cord noticed, even if the baby did not cry or breathe?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown",
+          "instructions": "Ask if E13c≠1"
+        },
+        {
+          "no": "E13e",
+          "variable": "baby_alive",
+          "label": "Is the baby alive now?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": "Ask where any sign of life reported"
+        },
+        {
+          "no": "E13f",
+          "variable": "baby_death_age",
+          "label": "How long did the baby live?",
+          "responseCoding": "Number + days/months; less than one day; unknown",
+          "instructions": "If deceased; permit 0 completed days"
+        },
+        {
+          "no": "E13g",
+          "variable": "baby_death_date",
+          "label": "When did the baby die?",
+          "responseCoding": "Exact/partial date; unknown",
+          "instructions": "If deceased"
+        },
+        {
+          "no": "E13h",
+          "variable": "baby_evidence",
+          "label": "Is a birth, delivery or other relevant record available and may we view it?",
+          "responseCoding": "1 Viewed;\n2 Available, not viewed;\n3 Unavailable;\n4 Permission declined",
+          "instructions": "Do not require documents for inclusion"
+        }
+      ]
+    },
+    {
+      "code": "E3",
+      "title": "Maternal Survival",
+      "level": "pregnancy",
+      "sheetName": "E3 Maternal Survival",
+      "infoBlocks": [
+        "E3. Maternal survival",
+        "For direct interviews with a living woman, record current survival automatically. Do not ask her whether she died."
+      ],
+      "items": [
+        {
+          "no": "E15",
+          "variable": "maternal_status",
+          "label": "Is [NAME] alive now?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown",
+          "instructions": "Ask proxies; direct interview=1"
+        },
+        {
+          "no": "E16",
+          "variable": "maternal_death_date",
+          "label": "When did she die?",
+          "responseCoding": "Exact/partial date; unknown",
+          "instructions": "If E15=0"
+        },
+        {
+          "no": "E17",
+          "variable": "death_timing",
+          "label": "Did she die while pregnant, during childbirth, or after the pregnancy ended?",
+          "responseCoding": "1 Pregnant;\n2 During childbirth;\n3 After pregnancy ended;\n8 Unknown",
+          "instructions": "If deceased"
+        },
+        {
+          "no": "E18",
+          "variable": "end_to_death",
+          "label": "How long after the pregnancy ended did she die?",
+          "responseCoding": "Number + days/weeks/months; unknown",
+          "instructions": "If E17=3"
+        }
+      ]
+    },
+    {
+      "code": "E4",
+      "title": "Notification & Follow-up",
+      "level": "pregnancy",
+      "sheetName": "E4 Notification & Follow-up",
+      "infoBlocks": [
+        "E4. Notification and follow-up",
+        "Ask for each episode, adapting pronouns for proxies."
+      ],
+      "items": [
+        {
+          "no": "E19",
+          "variable": "pregnancy_contact",
+          "label": "Did anyone in the community contact you about this pregnancy to record it or monitor how it was progressing?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": "Yes → E20–E22"
+        },
+        {
+          "no": "E20",
+          "variable": "contact_actor",
+          "label": "Who contacted you?",
+          "responseCoding": "Multiple: community leader/WDC; Scribe; FSO; facility worker; other; role unknown",
+          "instructions": "Record local name/description if useful"
+        },
+        {
+          "no": "E21",
+          "variable": "contact_timing",
+          "label": "When did they first contact you?",
+          "responseCoding": "1 During pregnancy;\n2 At birth/pregnancy ending;\n3 Afterwards;\n8 Unknown",
+          "instructions": "Optional month/year if remembered"
+        },
+        {
+          "no": "E22",
+          "variable": "contact_purpose",
+          "label": "What did they ask or do?",
+          "responseCoding": "Multiple: recorded pregnancy/details; asked about progress; recorded outcome; checked maternal survival; checked baby survival; provided clinical care only; other; unknown",
+          "instructions": "Distinguish surveillance from routine clinical care"
+        },
+        {
+          "no": "E23",
+          "variable": "outcome_contact",
+          "label": "After the pregnancy ended, did anyone contact you or the household to ask what happened to you and, where relevant, the baby?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": "Ask all ended episodes, including losses"
+        },
+        {
+          "no": "E24",
+          "variable": "followup_timing",
+          "label": "Was there any such contact six weeks or more after the pregnancy ended?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown",
+          "instructions": "If E23=1"
+        },
+        {
+          "no": "E25",
+          "variable": "followup_content",
+          "label": "What did they check during follow-up?",
+          "responseCoding": "Multiple: pregnancy outcome; woman’s health/survival; baby’s health/survival; other; unknown",
+          "instructions": ""
+        },
+        {
+          "no": "E26",
+          "variable": "notification_attempt",
+          "label": "Did you or someone in the household tell a community reporting person about the pregnancy or outcome?",
+          "responseCoding": "1 Yes; 0 No; 8 Unknown; 9 Declined",
+          "instructions": ""
+        },
+        {
+          "no": "E27",
+          "variable": "reporting_problem",
+          "label": "Was there any difficulty reporting the pregnancy or outcome or receiving follow-up?",
+          "responseCoding": "0 None reported;\n1 Person unavailable;\n2 Did not know whom to tell;\n3 Privacy/disclosure concern;\n4 Household moved/absent;\n5 Other;\n8 Unknown",
+          "instructions": "Multiple where needed; brief explanation only"
+        }
+      ]
+    },
+    {
+      "code": "F",
+      "title": "Closure & Referrals",
+      "level": "household",
+      "sheetName": "F Closure & Referrals",
+      "infoBlocks": [],
+      "items": [
+        {
+          "no": "F01",
+          "variable": "history_check",
+          "label": "“Have we included every pregnancy during the period, including any loss or baby who lived only briefly?”",
+          "responseCoding": "1 Yes;\n0 Additional episode identified;\n8 Uncertain;\n9 Declined",
+          "instructions": ""
+        },
+        {
+          "no": "F02",
+          "variable": "referral_ids",
+          "label": "Cases requiring mortality/stillbirth verification",
+          "responseCoding": "Linked IDs",
+          "instructions": ""
+        },
+        {
+          "no": "F03",
+          "variable": "interview_outcome",
+          "label": "Final household assessment outcome",
+          "responseCoding": "1 Complete;\n2 Partial;\n3 Further woman interview needed;\n4 Refused;\n5 Other",
+          "instructions": ""
+        },
+        {
+          "no": "F04",
+          "variable": "interviewer_notes",
+          "label": "Essential unresolved issues",
+          "responseCoding": "Short text; no unnecessary sensitive narrative",
+          "instructions": ""
+        }
+      ]
+    }
+  ]
+}
