@@ -1,7 +1,8 @@
 "use client";
 
-import { UserRound, Shield, Check, Globe, Wifi } from "lucide-react";
+import { UserRound, Shield, Check, Globe, Wifi, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
+import { supabase } from "@/lib/supabase/client";
 import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,6 +24,14 @@ export function ProfileMenu({
 }) {
   const { user, role, setRole, language, setLanguage } = useAuth();
   const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
+  const handleSignOut = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    // Clear any locally-persisted theme preference and reload to login
+    window.location.href = '/';
+  };
 
   return (
     <DropdownMenu>
@@ -120,6 +129,16 @@ export function ProfileMenu({
             {language === 'ha' && <Check className="size-3.5 text-primary" />}
           </DropdownMenuItem>
         </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          className="flex items-center gap-2 text-xs text-destructive cursor-pointer hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive"
+        >
+          <LogOut className="size-3.5" aria-hidden="true" />
+          <span>Sign out</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

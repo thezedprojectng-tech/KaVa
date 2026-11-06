@@ -9,7 +9,7 @@ import {
   ReviewFlag,
   AuditLogEntry
 } from '@/types/survey';
-import { EnumerationArea } from '@/types/auth';
+import { EnumerationArea, UserProfile } from '@/types/auth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import {
   evaluateHouseholdRules,

@@ -12,6 +12,7 @@ import { SurveyWizard } from "@/components/wizard/survey-wizard";
 import { ReviewQueue } from "@/components/review/review-queue";
 import { ResponsesTableView } from "@/components/responses/responses-table-view";
 import { AdminUsersView } from "@/components/admin/admin-users-view";
+import { FieldGuideView } from "@/components/field-guide/field-guide-view";
 
 function DashboardContentRouter() {
   const { pathname, navigate } = useDashboardNavigation();
@@ -53,6 +54,8 @@ function DashboardContentRouter() {
           onSwitchRole={setRole}
           language={language}
         />
+      ) : pathname === "/guide" ? (
+        <FieldGuideView language={language} />
       ) : (
         <KanoEaWorkspace
           language={language}
