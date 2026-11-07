@@ -1,14 +1,15 @@
 -- ==============================================================================
 -- KaVa: KASSEP Household Survey Platform — Supabase Schema & RLS Policies
--- Doctors Medical Aid Foundation (DMAF) — Kano State, Nigeria
--- ------------------------------------------------------------------------------
--- Design principles:
---   • Re-runnable: all DDL uses IF NOT EXISTS / CREATE OR REPLACE / ALTER COLUMN.
---   • All policies are preceded by DROP POLICY IF EXISTS so the file can be run
---     on an existing database without manual cleanup.
---   • RLS is enforced at the row level for every data table.
---   • Audit writes are done by security-definer triggers, never by app code.
---   • No DELETE is permitted on survey data for interviewers (admin only).
+-- Client: Doctors Medical Aid Foundation (DMAF) — Kano State, Nigeria
+--
+-- Features & Architecture:
+--   • Idempotent & Re-runnable: uses IF NOT EXISTS, DROP POLICY IF EXISTS,
+--     DROP TRIGGER IF EXISTS, and ALTER TABLE guards so it can run repeatedly.
+--   • UUID EA Access Control: user_has_ea_access(uuid) evaluates role, LGA, and EA.
+--   • Multi-level Row-Level Security: Admin, Supervisor, Interviewer scoping.
+--   • Survey Data Integrity: Interviewers cannot delete survey data; edits restricted
+--     to draft records in assigned EAs.
+--   • Security Definer Triggers: Immutable audit logging and updated_at tracking.
 -- ==============================================================================
 
 -- Enable UUID extension
@@ -30,8 +31,12 @@ create table if not exists public.profiles (
   updated_at    timestamptz default now()
 );
 
+-- Ensure column exists if table was created in an earlier migration
+alter table public.profiles
+  add column if not exists status text not null default 'active' check (status in ('active', 'inactive'));
+
 -- ==============================================================================
--- 2. ENUMERATION AREAS
+-- 2. ENUMERATION AREAS (EAs)
 -- ==============================================================================
 create table if not exists public.enumeration_areas (
   id                  uuid default uuid_generate_v4() primary key,
@@ -57,7 +62,7 @@ create index if not exists idx_ea_lga    on public.enumeration_areas(lga);
 create index if not exists idx_ea_status on public.enumeration_areas(status);
 
 -- ==============================================================================
--- 3. FORM DEFINITIONS (versioned survey JSON)
+-- 3. FORM DEFINITIONS (Versioned survey JSON definitions)
 -- ==============================================================================
 create table if not exists public.form_definitions (
   id         uuid default uuid_generate_v4() primary key,
@@ -70,8 +75,7 @@ create table if not exists public.form_definitions (
 
 -- ==============================================================================
 -- 4. HOUSEHOLDS (Level 1)
--- Note: ON DELETE RESTRICT — cannot delete an EA while it has households.
---       interviewer_id is NOT NULL; removing SET NULL avoids the contradiction.
+-- Note: ON DELETE RESTRICT on interviewer_id (removes previous NOT NULL / SET NULL conflict)
 -- ==============================================================================
 create table if not exists public.households (
   id               uuid default uuid_generate_v4() primary key,
@@ -142,7 +146,7 @@ create index if not exists idx_deaths_hh on public.deaths(assessment_hh_id);
 -- ==============================================================================
 create table if not exists public.pregnancies (
   id               uuid default uuid_generate_v4() primary key,
-  pregnancy_id     text unique not null, -- format: assessment_hh_id-woman_line-episode_no
+  pregnancy_id     text unique not null,
   household_id     uuid references public.households(id) on delete cascade not null,
   assessment_hh_id text not null,
   woman_line       integer not null,
@@ -161,7 +165,6 @@ create index if not exists idx_pregnancies_woman on public.pregnancies(assessmen
 
 -- ==============================================================================
 -- 8. BABIES (Level 4 — Baby Records)
---    Added status column (same pattern as other levels).
 -- ==============================================================================
 create table if not exists public.babies (
   id               uuid default uuid_generate_v4() primary key,
@@ -182,8 +185,13 @@ create table if not exists public.babies (
 
 create index if not exists idx_babies_preg on public.babies(pregnancy_id);
 
+-- Ensure status column exists if babies table was previously created
+alter table public.babies
+  add column if not exists status text not null default 'draft'
+    check (status in ('draft', 'submitted', 'reviewed'));
+
 -- ==============================================================================
--- 9. REVIEW FLAGS
+-- 9. REVIEW FLAGS (Surveillance & Quality Flags)
 -- ==============================================================================
 create table if not exists public.review_flags (
   id               uuid default uuid_generate_v4() primary key,
@@ -209,7 +217,7 @@ create index if not exists idx_flags_status on public.review_flags(status);
 create index if not exists idx_flags_ea     on public.review_flags(ea_id);
 
 -- ==============================================================================
--- 10. AUDIT LOG (written only by triggers; nobody can insert/update/delete)
+-- 10. AUDIT LOG (Immutable trail — written only by triggers)
 -- ==============================================================================
 create table if not exists public.audit_log (
   id          uuid default uuid_generate_v4() primary key,
@@ -227,7 +235,7 @@ create index if not exists idx_audit_record on public.audit_log(record_id);
 create index if not exists idx_audit_table  on public.audit_log(table_name);
 
 -- ==============================================================================
--- 11. HOUSEHOLD VISITS (visit attempt history — supports A10/A11 coding)
+-- 11. HOUSEHOLD VISITS (Visit attempt history for A10/A11)
 -- ==============================================================================
 create table if not exists public.household_visits (
   id               uuid default uuid_generate_v4() primary key,
@@ -235,7 +243,7 @@ create table if not exists public.household_visits (
   assessment_hh_id text not null,
   ea_id            uuid references public.enumeration_areas(id) not null,
   visit_number     integer not null,
-  visit_result     integer not null,          -- matches A10/A11 response codes
+  visit_result     integer not null,
   visited_at       timestamptz not null default now(),
   interviewer_id   uuid references public.profiles(id) on delete restrict not null,
   notes            text
@@ -245,7 +253,7 @@ create index if not exists idx_visits_hh on public.household_visits(assessment_h
 create index if not exists idx_visits_ea on public.household_visits(ea_id);
 
 -- ==============================================================================
--- ROW-LEVEL SECURITY — enable on all tables
+-- ROW-LEVEL SECURITY (RLS) ACTIVATION
 -- ==============================================================================
 alter table public.profiles          enable row level security;
 alter table public.enumeration_areas enable row level security;
@@ -260,11 +268,13 @@ alter table public.audit_log         enable row level security;
 alter table public.household_visits  enable row level security;
 
 -- ==============================================================================
--- HELPER FUNCTIONS
+-- HELPER FUNCTIONS (Security Definer with set search_path = public)
 -- ==============================================================================
 
--- Returns the current user's role from profiles (security definer so it always
--- reads the real role even when invoked inside a policy USING expression).
+-- Drop old text overload of user_has_ea_access if present
+drop function if exists public.user_has_ea_access(text);
+
+-- Current user role helper
 create or replace function public.current_user_role()
 returns text
 language sql stable security definer
@@ -273,10 +283,7 @@ as $$
   select role from public.profiles where id = auth.uid();
 $$;
 
--- Returns true if the calling user may access the given EA (by its UUID).
--- Admins always pass. Supervisors pass when their assigned_lgas contains the
--- EA's LGA or their assigned_eas contains the EA's code. Interviewers pass
--- when their assigned_eas contains the EA's code.
+-- UUID version of user_has_ea_access helper
 create or replace function public.user_has_ea_access(p_ea_id uuid)
 returns boolean
 language sql stable security definer
@@ -296,13 +303,13 @@ as $$
 $$;
 
 -- ==============================================================================
--- RLS POLICIES
--- Convention: drop before create so this file is re-runnable.
+-- ROW-LEVEL SECURITY POLICIES
+-- Each policy is preceded by DROP POLICY IF EXISTS for re-runnability.
 -- ==============================================================================
 
--- ── PROFILES ─────────────────────────────────────────────────────────────────
-drop policy if exists "Users read own profile"   on public.profiles;
-drop policy if exists "Admins manage profiles"   on public.profiles;
+-- ── 1. PROFILES ──────────────────────────────────────────────────────────────
+drop policy if exists "Users read own profile" on public.profiles;
+drop policy if exists "Admins manage profiles" on public.profiles;
 
 create policy "Users read own profile" on public.profiles
   for select using (auth.uid() = id or public.current_user_role() in ('admin', 'supervisor'));
@@ -310,7 +317,7 @@ create policy "Users read own profile" on public.profiles
 create policy "Admins manage profiles" on public.profiles
   for all using (public.current_user_role() = 'admin');
 
--- ── ENUMERATION AREAS ────────────────────────────────────────────────────────
+-- ── 2. ENUMERATION AREAS ────────────────────────────────────────────────────
 drop policy if exists "Authenticated users read EAs" on public.enumeration_areas;
 drop policy if exists "Admins manage EAs"            on public.enumeration_areas;
 
@@ -320,7 +327,7 @@ create policy "Authenticated users read EAs" on public.enumeration_areas
 create policy "Admins manage EAs" on public.enumeration_areas
   for all using (public.current_user_role() = 'admin');
 
--- ── FORM DEFINITIONS ─────────────────────────────────────────────────────────
+-- ── 3. FORM DEFINITIONS ─────────────────────────────────────────────────────
 drop policy if exists "Authenticated users read form definitions" on public.form_definitions;
 drop policy if exists "Admins manage form definitions"           on public.form_definitions;
 
@@ -330,25 +337,27 @@ create policy "Authenticated users read form definitions" on public.form_definit
 create policy "Admins manage form definitions" on public.form_definitions
   for all using (public.current_user_role() = 'admin');
 
--- ── HOUSEHOLDS ───────────────────────────────────────────────────────────────
+-- ── 4. HOUSEHOLDS ───────────────────────────────────────────────────────────
 drop policy if exists "Admins full access to households"          on public.households;
 drop policy if exists "Supervisors read assigned households"      on public.households;
 drop policy if exists "Supervisors update reviewed households"    on public.households;
+drop policy if exists "Interviewers select own households"        on public.households;
 drop policy if exists "Interviewers view and edit own households" on public.households;
 drop policy if exists "Interviewers insert own households"        on public.households;
 drop policy if exists "Interviewers update own draft households"  on public.households;
 
--- Admin: unrestricted
+-- Admin: full access
 create policy "Admins full access to households" on public.households
   for all using (public.current_user_role() = 'admin');
 
--- Supervisor: select only their EAs; update only to set status = 'reviewed'
+-- Supervisors: select only where user_has_ea_access(ea_id)
 create policy "Supervisors read assigned households" on public.households
   for select using (
     public.current_user_role() = 'supervisor'
     and public.user_has_ea_access(ea_id)
   );
 
+-- Supervisors: update (to set status 'reviewed') only for those EAs
 create policy "Supervisors update reviewed households" on public.households
   for update
   using (
@@ -358,15 +367,17 @@ create policy "Supervisors update reviewed households" on public.households
   with check (
     public.current_user_role() = 'supervisor'
     and status = 'reviewed'
+    and public.user_has_ea_access(ea_id)
   );
 
--- Interviewer: own records only
+-- Interviewers: select own
 create policy "Interviewers select own households" on public.households
   for select using (
     public.current_user_role() = 'interviewer'
     and interviewer_id = auth.uid()
   );
 
+-- Interviewers: insert with check (interviewer_id = auth.uid() and user_has_ea_access(ea_id))
 create policy "Interviewers insert own households" on public.households
   for insert with check (
     public.current_user_role() = 'interviewer'
@@ -374,7 +385,8 @@ create policy "Interviewers insert own households" on public.households
     and public.user_has_ea_access(ea_id)
   );
 
--- Can only update while status = 'draft'; result can be 'draft' or 'submitted'
+-- Interviewers: update using (interviewer_id = auth.uid() and status = 'draft')
+-- WITH CHECK (interviewer_id = auth.uid() and status in ('draft','submitted')). No delete.
 create policy "Interviewers update own draft households" on public.households
   for update
   using (
@@ -387,7 +399,7 @@ create policy "Interviewers update own draft households" on public.households
     and status in ('draft', 'submitted')
   );
 
--- ── WOMEN ────────────────────────────────────────────────────────────────────
+-- ── 5. WOMEN ────────────────────────────────────────────────────────────────
 drop policy if exists "Admins full access to women"      on public.women;
 drop policy if exists "Supervisors read women"           on public.women;
 drop policy if exists "Interviewers manage own women"    on public.women;
@@ -428,6 +440,7 @@ create policy "Interviewers update own women" on public.women
   using (
     public.current_user_role() = 'interviewer'
     and interviewer_id = auth.uid()
+    and public.user_has_ea_access(ea_id)
     and exists (
       select 1 from public.households h
       where h.id = household_id
@@ -437,9 +450,16 @@ create policy "Interviewers update own women" on public.women
   )
   with check (
     interviewer_id = auth.uid()
+    and public.user_has_ea_access(ea_id)
+    and exists (
+      select 1 from public.households h
+      where h.id = household_id
+        and h.interviewer_id = auth.uid()
+        and h.status = 'draft'
+    )
   );
 
--- ── DEATHS ───────────────────────────────────────────────────────────────────
+-- ── 6. DEATHS ───────────────────────────────────────────────────────────────
 drop policy if exists "Admins full access to deaths"     on public.deaths;
 drop policy if exists "Supervisors read deaths"          on public.deaths;
 drop policy if exists "Interviewers manage own deaths"   on public.deaths;
@@ -480,6 +500,7 @@ create policy "Interviewers update own deaths" on public.deaths
   using (
     public.current_user_role() = 'interviewer'
     and interviewer_id = auth.uid()
+    and public.user_has_ea_access(ea_id)
     and exists (
       select 1 from public.households h
       where h.id = household_id
@@ -489,9 +510,16 @@ create policy "Interviewers update own deaths" on public.deaths
   )
   with check (
     interviewer_id = auth.uid()
+    and public.user_has_ea_access(ea_id)
+    and exists (
+      select 1 from public.households h
+      where h.id = household_id
+        and h.interviewer_id = auth.uid()
+        and h.status = 'draft'
+    )
   );
 
--- ── PREGNANCIES ──────────────────────────────────────────────────────────────
+-- ── 7. PREGNANCIES ──────────────────────────────────────────────────────────
 drop policy if exists "Admins full access to pregnancies"     on public.pregnancies;
 drop policy if exists "Supervisors read pregnancies"          on public.pregnancies;
 drop policy if exists "Interviewers manage own pregnancies"   on public.pregnancies;
@@ -532,6 +560,7 @@ create policy "Interviewers update own pregnancies" on public.pregnancies
   using (
     public.current_user_role() = 'interviewer'
     and interviewer_id = auth.uid()
+    and public.user_has_ea_access(ea_id)
     and exists (
       select 1 from public.households h
       where h.id = household_id
@@ -541,9 +570,16 @@ create policy "Interviewers update own pregnancies" on public.pregnancies
   )
   with check (
     interviewer_id = auth.uid()
+    and public.user_has_ea_access(ea_id)
+    and exists (
+      select 1 from public.households h
+      where h.id = household_id
+        and h.interviewer_id = auth.uid()
+        and h.status = 'draft'
+    )
   );
 
--- ── BABIES ───────────────────────────────────────────────────────────────────
+-- ── 8. BABIES ───────────────────────────────────────────────────────────────
 drop policy if exists "Admins full access to babies"     on public.babies;
 drop policy if exists "Supervisors read babies"          on public.babies;
 drop policy if exists "Interviewers manage own babies"   on public.babies;
@@ -585,6 +621,7 @@ create policy "Interviewers update own babies" on public.babies
   using (
     public.current_user_role() = 'interviewer'
     and interviewer_id = auth.uid()
+    and public.user_has_ea_access(ea_id)
     and exists (
       select 1 from public.pregnancies pr
       join   public.households h on h.id = pr.household_id
@@ -595,11 +632,19 @@ create policy "Interviewers update own babies" on public.babies
   )
   with check (
     interviewer_id = auth.uid()
+    and public.user_has_ea_access(ea_id)
+    and exists (
+      select 1 from public.pregnancies pr
+      join   public.households h on h.id = pr.household_id
+      where  pr.pregnancy_id = babies.pregnancy_id
+        and  h.interviewer_id = auth.uid()
+        and  h.status = 'draft'
+    )
   );
 
--- ── REVIEW FLAGS ─────────────────────────────────────────────────────────────
-drop policy if exists "Supervisors and admins manage review flags"    on public.review_flags;
-drop policy if exists "Interviewers view flags for own interviews"    on public.review_flags;
+-- ── 9. REVIEW FLAGS ─────────────────────────────────────────────────────────
+drop policy if exists "Supervisors and admins manage review flags" on public.review_flags;
+drop policy if exists "Interviewers view flags for own interviews" on public.review_flags;
 
 create policy "Supervisors and admins manage review flags" on public.review_flags
   for all using (public.current_user_role() in ('admin', 'supervisor'));
@@ -610,19 +655,20 @@ create policy "Interviewers view flags for own interviews" on public.review_flag
     and interviewer_id = auth.uid()
   );
 
--- ── AUDIT LOG ────────────────────────────────────────────────────────────────
--- Triggers write; nobody (not even admins) can INSERT/UPDATE/DELETE from app.
+-- ── 10. AUDIT LOG ────────────────────────────────────────────────────────────
+-- Only admins can select audit_log; nobody (not even admins) can update or delete it.
+-- Writes are performed exclusively by SECURITY DEFINER trigger.
 drop policy if exists "Admins view audit log"             on public.audit_log;
 drop policy if exists "All authenticated insert audit log" on public.audit_log;
 
 create policy "Admins view audit log" on public.audit_log
   for select using (public.current_user_role() = 'admin');
 
--- ── HOUSEHOLD VISITS ─────────────────────────────────────────────────────────
-drop policy if exists "Admins full access to household visits"       on public.household_visits;
-drop policy if exists "Supervisors read household visits"            on public.household_visits;
-drop policy if exists "Interviewers select own household visits"     on public.household_visits;
-drop policy if exists "Interviewers insert own household visits"     on public.household_visits;
+-- ── 11. HOUSEHOLD VISITS ─────────────────────────────────────────────────────
+drop policy if exists "Admins full access to household visits"   on public.household_visits;
+drop policy if exists "Supervisors read household visits"        on public.household_visits;
+drop policy if exists "Interviewers select own household visits" on public.household_visits;
+drop policy if exists "Interviewers insert own household visits" on public.household_visits;
 
 create policy "Admins full access to household visits" on public.household_visits
   for all using (public.current_user_role() = 'admin');
@@ -647,10 +693,10 @@ create policy "Interviewers insert own household visits" on public.household_vis
   );
 
 -- ==============================================================================
--- TRIGGERS
+-- TRIGGERS (Re-runnable via DROP TRIGGER IF EXISTS)
 -- ==============================================================================
 
--- ── updated_at auto-maintenance ───────────────────────────────────────────────
+-- ── updated_at auto-maintenance trigger function ──────────────────────────────
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -663,55 +709,44 @@ begin
 end;
 $$;
 
-do $$ begin
-  -- Create updated_at triggers for tables that have the column
-  if not exists (select 1 from pg_trigger where tgname = 'trg_profiles_updated_at') then
-    create trigger trg_profiles_updated_at
-      before update on public.profiles
-      for each row execute function public.set_updated_at();
-  end if;
+drop trigger if exists trg_profiles_updated_at on public.profiles;
+create trigger trg_profiles_updated_at
+  before update on public.profiles
+  for each row execute function public.set_updated_at();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_eas_updated_at') then
-    create trigger trg_eas_updated_at
-      before update on public.enumeration_areas
-      for each row execute function public.set_updated_at();
-  end if;
+drop trigger if exists trg_eas_updated_at on public.enumeration_areas;
+create trigger trg_eas_updated_at
+  before update on public.enumeration_areas
+  for each row execute function public.set_updated_at();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_households_updated_at') then
-    create trigger trg_households_updated_at
-      before update on public.households
-      for each row execute function public.set_updated_at();
-  end if;
+drop trigger if exists trg_households_updated_at on public.households;
+create trigger trg_households_updated_at
+  before update on public.households
+  for each row execute function public.set_updated_at();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_women_updated_at') then
-    create trigger trg_women_updated_at
-      before update on public.women
-      for each row execute function public.set_updated_at();
-  end if;
+drop trigger if exists trg_women_updated_at on public.women;
+create trigger trg_women_updated_at
+  before update on public.women
+  for each row execute function public.set_updated_at();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_deaths_updated_at') then
-    create trigger trg_deaths_updated_at
-      before update on public.deaths
-      for each row execute function public.set_updated_at();
-  end if;
+drop trigger if exists trg_deaths_updated_at on public.deaths;
+create trigger trg_deaths_updated_at
+  before update on public.deaths
+  for each row execute function public.set_updated_at();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_pregnancies_updated_at') then
-    create trigger trg_pregnancies_updated_at
-      before update on public.pregnancies
-      for each row execute function public.set_updated_at();
-  end if;
+drop trigger if exists trg_pregnancies_updated_at on public.pregnancies;
+create trigger trg_pregnancies_updated_at
+  before update on public.pregnancies
+  for each row execute function public.set_updated_at();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_babies_updated_at') then
-    create trigger trg_babies_updated_at
-      before update on public.babies
-      for each row execute function public.set_updated_at();
-  end if;
-end $$;
+drop trigger if exists trg_babies_updated_at on public.babies;
+create trigger trg_babies_updated_at
+  before update on public.babies
+  for each row execute function public.set_updated_at();
 
 -- ── Audit trigger function ────────────────────────────────────────────────────
--- Writes one row to audit_log on INSERT / UPDATE / DELETE.
--- Runs as security definer (bypasses RLS on audit_log) so the trigger can
--- always write regardless of who triggered the change.
+-- Writes one row to audit_log on INSERT / UPDATE / DELETE for audited tables.
+-- Runs as security definer (bypasses RLS) to record system changes accurately.
 create or replace function public.write_audit_log()
 returns trigger
 language plpgsql
@@ -721,7 +756,6 @@ as $$
 declare
   v_record_id text;
 begin
-  -- Derive a stable record identifier from the mutated row
   if tg_op = 'DELETE' then
     v_record_id := old.id::text;
   else
@@ -746,60 +780,50 @@ begin
 end;
 $$;
 
-do $$ begin
-  -- Attach audit triggers to every survey table
-  if not exists (select 1 from pg_trigger where tgname = 'trg_audit_households') then
-    create trigger trg_audit_households
-      after insert or update or delete on public.households
-      for each row execute function public.write_audit_log();
-  end if;
+drop trigger if exists trg_audit_households on public.households;
+create trigger trg_audit_households
+  after insert or update or delete on public.households
+  for each row execute function public.write_audit_log();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_audit_women') then
-    create trigger trg_audit_women
-      after insert or update or delete on public.women
-      for each row execute function public.write_audit_log();
-  end if;
+drop trigger if exists trg_audit_women on public.women;
+create trigger trg_audit_women
+  after insert or update or delete on public.women
+  for each row execute function public.write_audit_log();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_audit_deaths') then
-    create trigger trg_audit_deaths
-      after insert or update or delete on public.deaths
-      for each row execute function public.write_audit_log();
-  end if;
+drop trigger if exists trg_audit_deaths on public.deaths;
+create trigger trg_audit_deaths
+  after insert or update or delete on public.deaths
+  for each row execute function public.write_audit_log();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_audit_pregnancies') then
-    create trigger trg_audit_pregnancies
-      after insert or update or delete on public.pregnancies
-      for each row execute function public.write_audit_log();
-  end if;
+drop trigger if exists trg_audit_pregnancies on public.pregnancies;
+create trigger trg_audit_pregnancies
+  after insert or update or delete on public.pregnancies
+  for each row execute function public.write_audit_log();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_audit_babies') then
-    create trigger trg_audit_babies
-      after insert or update or delete on public.babies
-      for each row execute function public.write_audit_log();
-  end if;
+drop trigger if exists trg_audit_babies on public.babies;
+create trigger trg_audit_babies
+  after insert or update or delete on public.babies
+  for each row execute function public.write_audit_log();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_audit_review_flags') then
-    create trigger trg_audit_review_flags
-      after insert or update or delete on public.review_flags
-      for each row execute function public.write_audit_log();
-  end if;
+drop trigger if exists trg_audit_review_flags on public.review_flags;
+create trigger trg_audit_review_flags
+  after insert or update or delete on public.review_flags
+  for each row execute function public.write_audit_log();
 
-  if not exists (select 1 from pg_trigger where tgname = 'trg_audit_profiles') then
-    create trigger trg_audit_profiles
-      after insert or update or delete on public.profiles
-      for each row execute function public.write_audit_log();
-  end if;
-end $$;
+drop trigger if exists trg_audit_profiles on public.profiles;
+create trigger trg_audit_profiles
+  after insert or update or delete on public.profiles
+  for each row execute function public.write_audit_log();
 
 -- ==============================================================================
--- BOOTSTRAP — create the first admin profile for an existing auth user
+-- BOOTSTRAP SNIPPET — FIRST ADMIN ACCOUNT
 -- ==============================================================================
--- Run this snippet ONCE after creating the first user via Supabase Auth dashboard
--- or the invite email. Replace the UUID with the user's actual auth.users.id.
+-- Run after creating an admin user via Supabase Auth (Dashboard -> Authentication).
+-- Replace '<auth-user-uuid>' with the UUID from auth.users:
 --
 --   insert into public.profiles (id, role, full_name, email, status)
 --   values (
---     '<auth-user-uuid>',         -- from auth.users table
+--     '<auth-user-uuid>',
 --     'admin',
 --     'Dr. Amina Sabu',
 --     'coordinator@dmaf-kassep.org',
