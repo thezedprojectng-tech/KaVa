@@ -184,7 +184,14 @@ export class SurveySyncService {
     // Household flags
     const hhCheck = evaluateHouseholdRules(hhRecord, womenRecords, deathRecords);
     hhCheck.flags.forEach(f => {
-      collectedFlags.push({ ...f, id: `flag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, created_at: now });
+      collectedFlags.push({
+        ...f,
+        id: `flag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        ea_id,
+        interviewer_id,
+        status: 'pending',
+        created_at: now
+      });
     });
     allReferralIds.push(...hhCheck.referralIds);
 
@@ -193,7 +200,14 @@ export class SurveySyncService {
       const wPregnancies = pregnancyRecords.filter(p => p.woman_line === w.woman_line);
       const wCheck = evaluateWomanRules(w, wPregnancies, assessment_hh_id, ea_id);
       wCheck.flags.forEach(f => {
-        collectedFlags.push({ ...f, id: `flag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, created_at: now });
+        collectedFlags.push({
+          ...f,
+          id: `flag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          ea_id,
+          interviewer_id,
+          status: 'pending',
+          created_at: now
+        });
       });
       allReferralIds.push(...wCheck.referralIds);
     });
@@ -202,7 +216,14 @@ export class SurveySyncService {
     deathRecords.forEach(d => {
       const dCheck = evaluateDeathRosterRules(d, assessment_hh_id, ea_id);
       dCheck.flags.forEach(f => {
-        collectedFlags.push({ ...f, id: `flag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, created_at: now });
+        collectedFlags.push({
+          ...f,
+          id: `flag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          ea_id,
+          interviewer_id,
+          status: 'pending',
+          created_at: now
+        });
       });
       allReferralIds.push(...dCheck.referralIds);
     });
@@ -212,13 +233,33 @@ export class SurveySyncService {
       const pBabies = babyRecords.filter(b => b.pregnancy_id === p.pregnancy_id);
       const pCheck = evaluatePregnancyAndBabyRules(p, pBabies, assessment_hh_id, ea_id);
       pCheck.flags.forEach(f => {
-        collectedFlags.push({ ...f, id: `flag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, created_at: now });
+        collectedFlags.push({
+          ...f,
+          id: `flag-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          ea_id,
+          interviewer_id,
+          status: 'pending',
+          created_at: now
+        });
       });
       allReferralIds.push(...pCheck.referralIds);
     });
 
     // Link referral IDs into Section F02
     hhRecord.data.referral_ids = allReferralIds.join(', ');
+
+    // Household Visit Record (A10/A11)
+    const visitRecord = {
+      id: `visit-${assessment_hh_id}-${hhRecord.visit_number || 1}-${Date.now()}`,
+      household_id: hhRecord.id,
+      assessment_hh_id,
+      ea_id,
+      visit_number: Number(householdData.visit_number || 1),
+      visit_result: Number(householdData.visit_result || 1),
+      visited_at: householdData.interview_date ? `${householdData.interview_date}T12:00:00.000Z` : now,
+      interviewer_id,
+      notes: householdData.visit_notes || null
+    };
 
     // 7. Persist to Dexie (IndexedDB)
     await kavaDb.transaction('rw', [
@@ -227,6 +268,7 @@ export class SurveySyncService {
       kavaDb.deaths,
       kavaDb.pregnancies,
       kavaDb.babies,
+      kavaDb.household_visits,
       kavaDb.review_flags,
       kavaDb.audit_logs,
       kavaDb.active_drafts,
@@ -237,6 +279,7 @@ export class SurveySyncService {
       if (deathRecords.length > 0) await kavaDb.deaths.bulkPut(deathRecords);
       if (pregnancyRecords.length > 0) await kavaDb.pregnancies.bulkPut(pregnancyRecords);
       if (babyRecords.length > 0) await kavaDb.babies.bulkPut(babyRecords);
+      await kavaDb.household_visits.put(visitRecord);
       if (collectedFlags.length > 0) await kavaDb.review_flags.bulkPut(collectedFlags);
 
       // Audit Log
@@ -267,15 +310,149 @@ export class SurveySyncService {
       }
     });
 
-    // 8. Background sync to Supabase if online
+    // 8. Sync to Supabase in strict relational order required by RLS:
+    //    Step 8a: Insert the household with status 'draft' first (never as 'submitted')
+    //    Step 8b: Insert children while household is 'draft' (women, deaths, pregnancies, babies, household_visits, review_flags)
+    //    Step 8c: Only then update the household to status 'submitted' (setting submitted_at)
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from('households').upsert(hhRecord);
-        if (womenRecords.length > 0) await supabase.from('women').upsert(womenRecords);
-        if (deathRecords.length > 0) await supabase.from('deaths').upsert(deathRecords);
-        if (pregnancyRecords.length > 0) await supabase.from('pregnancies').upsert(pregnancyRecords);
-        if (babyRecords.length > 0) await supabase.from('babies').upsert(babyRecords);
-        if (collectedFlags.length > 0) await supabase.from('review_flags').upsert(collectedFlags);
+        let targetEaId = ea_id;
+        try {
+          const { data: matchedEa } = await supabase
+            .from('enumeration_areas')
+            .select('id')
+            .or(`id.eq.${ea_id},code.eq.${householdData.ea_id || ea_id}`)
+            .limit(1)
+            .maybeSingle();
+          if (matchedEa?.id) {
+            targetEaId = matchedEa.id;
+          }
+        } catch {}
+
+        // Step 8a: Insert household as draft
+        const draftHouseholdPayload = {
+          assessment_hh_id: hhRecord.assessment_hh_id,
+          ea_id: targetEaId,
+          interviewer_id,
+          supervisor_id: hhRecord.supervisor_id || null,
+          visit_number: hhRecord.visit_number,
+          visit_result: hhRecord.visit_result,
+          status: 'draft',
+          data: hhRecord.data,
+          created_at: hhRecord.created_at,
+          updated_at: hhRecord.updated_at
+        };
+
+        const { data: insertedHh, error: hhInsertError } = await supabase
+          .from('households')
+          .upsert(draftHouseholdPayload, { onConflict: 'assessment_hh_id' })
+          .select('id')
+          .single();
+
+        if (hhInsertError) {
+          console.warn('Supabase draft household insert error:', hhInsertError);
+          throw hhInsertError;
+        }
+
+        const supabaseHhId = insertedHh?.id || hhRecord.id;
+
+        // Step 8b: Insert children while parent household is in 'draft' status
+        const womenPayload = womenRecords.map(w => ({
+          ...w,
+          household_id: supabaseHhId,
+          ea_id: targetEaId,
+          interviewer_id
+        }));
+
+        const deathsPayload = deathRecords.map(d => ({
+          ...d,
+          household_id: supabaseHhId,
+          ea_id: targetEaId,
+          interviewer_id
+        }));
+
+        const pregnanciesPayload = pregnancyRecords.map(p => ({
+          ...p,
+          household_id: supabaseHhId,
+          ea_id: targetEaId,
+          interviewer_id
+        }));
+
+        const babiesPayload = babyRecords.map(b => ({
+          ...b,
+          ea_id: targetEaId,
+          interviewer_id
+        }));
+
+        const visitsPayload = [{
+          household_id: supabaseHhId,
+          assessment_hh_id,
+          ea_id: targetEaId,
+          visit_number: visitRecord.visit_number,
+          visit_result: visitRecord.visit_result,
+          visited_at: visitRecord.visited_at,
+          interviewer_id,
+          notes: visitRecord.notes
+        }];
+
+        const flagsPayload = collectedFlags.map(f => ({
+          type: f.type,
+          level: f.level,
+          record_ref: f.record_ref,
+          assessment_hh_id: f.assessment_hh_id,
+          ea_id: targetEaId,
+          interviewer_id,
+          status: 'pending',
+          severity: f.severity,
+          message: f.message,
+          notes: f.notes || null,
+          created_at: f.created_at
+        }));
+
+        if (womenPayload.length > 0) {
+          const { error: wErr } = await supabase.from('women').upsert(womenPayload, { onConflict: 'assessment_hh_id,woman_line' });
+          if (wErr) console.warn('Supabase women sync error:', wErr);
+        }
+
+        if (deathsPayload.length > 0) {
+          const { error: dErr } = await supabase.from('deaths').upsert(deathsPayload, { onConflict: 'assessment_hh_id,death_line' });
+          if (dErr) console.warn('Supabase deaths sync error:', dErr);
+        }
+
+        if (pregnanciesPayload.length > 0) {
+          const { error: pErr } = await supabase.from('pregnancies').upsert(pregnanciesPayload, { onConflict: 'pregnancy_id' });
+          if (pErr) console.warn('Supabase pregnancies sync error:', pErr);
+        }
+
+        if (babiesPayload.length > 0) {
+          const { error: bErr } = await supabase.from('babies').upsert(babiesPayload, { onConflict: 'pregnancy_id,baby_id' });
+          if (bErr) console.warn('Supabase babies sync error:', bErr);
+        }
+
+        if (visitsPayload.length > 0) {
+          const { error: vErr } = await supabase.from('household_visits').insert(visitsPayload);
+          if (vErr) console.warn('Supabase visits sync error:', vErr);
+        }
+
+        if (flagsPayload.length > 0) {
+          const { error: fErr } = await supabase.from('review_flags').insert(flagsPayload);
+          if (fErr) console.warn('Supabase flags sync error:', fErr);
+        }
+
+        // Step 8c: Only then update the household to status 'submitted' and set submitted_at
+        const { error: submitErr } = await supabase
+          .from('households')
+          .update({
+            status: 'submitted',
+            submitted_at: now,
+            updated_at: now,
+            data: hhRecord.data
+          })
+          .eq('id', supabaseHhId);
+
+        if (submitErr) {
+          console.warn('Supabase submit status update error:', submitErr);
+        }
       } catch (err) {
         console.warn('Background Supabase sync failed, retained in local IndexedDB:', err);
       }

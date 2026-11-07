@@ -19,6 +19,7 @@ import {
   Lock,
   X
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/auth-context';
 import { cn } from '@/lib/utils';
 
 interface ReviewQueueProps {
@@ -33,6 +34,7 @@ export function ReviewQueue({
   language
 }: ReviewQueueProps) {
   const isHausa = language === 'ha';
+  const { user } = useAuth();
   const isAuthorized = role === 'admin' || role === 'supervisor';
 
   const [flags, setFlags] = useState<ReviewFlag[]>([]);
@@ -67,6 +69,23 @@ export function ReviewQueue({
   };
 
   const filteredFlags = flags.filter(f => {
+    // Role-based scope matching 20261107_rls_patch:
+    // Admin: all flags
+    // Supervisor: flags for EAs in assigned LGAs or assigned EAs
+    // Interviewer: flags raised by self (interviewer_id === user.id) or in assigned EAs
+    let hasScope = true;
+    if (role === 'interviewer') {
+      hasScope = f.interviewer_id === user.id || (!!f.ea_id && (user.assignedEas || []).includes(f.ea_id));
+    } else if (role === 'supervisor') {
+      const assignedLgas = user.assignedLgas || [];
+      const assignedEas = user.assignedEas || [];
+      if (!assignedLgas.includes('All LGAs')) {
+        hasScope = (!!f.ea_id && assignedEas.includes(f.ea_id)) || (!!f.ea_id && assignedLgas.some(lga => f.ea_id?.includes(lga)));
+      }
+    }
+
+    if (!hasScope) return false;
+
     const matchesStatus = filterStatus === 'all' || f.status === filterStatus;
     const matchesType = filterType === 'all' || f.type === filterType;
     const matchesSearch =

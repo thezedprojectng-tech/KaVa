@@ -21,6 +21,15 @@ function DashboardContentRouter() {
   const [activeEaCode, setActiveEaCode] = useState<string>("KAN-MUN-001");
   const [activeHhId, setActiveHhId] = useState<string | undefined>(undefined);
 
+  // Sync active EA to first assigned EA for interviewers
+  React.useEffect(() => {
+    if (role === 'interviewer' && user.assignedEas?.length > 0) {
+      if (!user.assignedEas.includes(activeEaCode)) {
+        setActiveEaCode(user.assignedEas[0]);
+      }
+    }
+  }, [role, user.assignedEas, activeEaCode]);
+
   const handleStartInterviewWithEa = (eaCode: string, hhId?: string) => {
     setActiveEaCode(eaCode);
     setActiveHhId(hhId);

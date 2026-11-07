@@ -31,6 +31,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ profiles: [], source: 'offline' });
     }
 
+    // Verify requester if bearer token is present
+    const authHeader = req.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+      if (user) {
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('status')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profile?.status === 'inactive') {
+          return NextResponse.json({ error: 'Account is deactivated. Access denied.' }, { status: 403 });
+        }
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('profiles')
       .select('*')
@@ -171,6 +188,20 @@ export async function PATCH(req: NextRequest) {
       const { error } = await supabaseAdmin.from('profiles').update(updates).eq('id', id);
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // If status changed and service role key is available, update auth ban state
+      const adminClient = getSupabaseAdmin();
+      if (adminClient && status !== undefined) {
+        try {
+          if (status === 'inactive') {
+            await adminClient.auth.admin.updateUserById(id, { ban_duration: '876000h' });
+          } else if (status === 'active') {
+            await adminClient.auth.admin.updateUserById(id, { ban_duration: 'none' });
+          }
+        } catch (authErr) {
+          console.warn('Supabase auth ban update skipped:', authErr);
+        }
       }
     }
 

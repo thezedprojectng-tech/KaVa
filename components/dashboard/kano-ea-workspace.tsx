@@ -5,6 +5,8 @@ import { EnumerationArea } from '@/types/auth';
 import { HouseholdRecord } from '@/types/survey';
 import { surveySyncService } from '@/lib/db/sync';
 import { SEED_KANO_EAS } from '@/lib/db/seed-eas';
+import { useAuth } from '@/lib/auth/auth-context';
+import { userHasEaAccess } from '@/lib/auth/ea-access';
 import { KanoMap } from './kano-map';
 import { StatsOverview } from './stats-overview';
 import { EaImportDialog } from './ea-import-dialog';
@@ -46,10 +48,11 @@ export function KanoEaWorkspace({
   onStartInterviewWithEa
 }: KanoEaWorkspaceProps) {
   const isHausa = language === 'ha';
+  const { user, role } = useAuth();
 
   const [eas, setEas] = useState<EnumerationArea[]>(SEED_KANO_EAS);
   const [households, setHouseholds] = useState<HouseholdRecord[]>([]);
-  const [selectedEa, setSelectedEa] = useState<EnumerationArea | null>(SEED_KANO_EAS[0] || null);
+  const [selectedEa, setSelectedEa] = useState<EnumerationArea | null>(null);
   const [activeTab, setActiveTab] = useState<'map' | 'households'>(() => {
     if (typeof window === 'undefined') return 'map';
     const tabParam = new URLSearchParams(window.location.search).get('tab');
@@ -76,6 +79,14 @@ export function KanoEaWorkspace({
     return () => observer.disconnect();
   }, []);
 
+  // Filter EAs by user authorization:
+  // - Admin: all EAs
+  // - Supervisor: assigned LGAs or assigned EAs
+  // - Interviewer: strictly assigned EA codes only
+  const accessibleEas = useMemo(() => {
+    return eas.filter((ea) => userHasEaAccess(user, ea));
+  }, [eas, user]);
+
   const loadData = async () => {
     try {
       const [loadedEas, loadedHh] = await Promise.all([
@@ -85,9 +96,6 @@ export function KanoEaWorkspace({
       const resolvedEas = loadedEas.length > 0 ? loadedEas : SEED_KANO_EAS;
       setEas(resolvedEas);
       setHouseholds(loadedHh);
-      if (!selectedEa && resolvedEas.length > 0) {
-        setSelectedEa(resolvedEas[0]);
-      }
     } catch (err) {
       console.warn('Failed to load DB EAs, fallback to seed:', err);
     }
@@ -97,18 +105,29 @@ export function KanoEaWorkspace({
     loadData();
   }, []);
 
+  // Keep selectedEa synchronized with accessible EAs
+  useEffect(() => {
+    if (accessibleEas.length > 0) {
+      if (!selectedEa || !accessibleEas.some((e) => e.code === selectedEa.code)) {
+        setSelectedEa(accessibleEas[0]);
+      }
+    } else {
+      setSelectedEa(null);
+    }
+  }, [accessibleEas, selectedEa]);
+
   const handleImportSuccess = async (newEas: EnumerationArea[]) => {
     await surveySyncService.upsertEnumerationAreas(newEas);
     await loadData();
   };
 
   const lgas = useMemo(() => {
-    const set = new Set(eas.map((e) => e.lga));
+    const set = new Set(accessibleEas.map((e) => e.lga));
     return Array.from(set).sort();
-  }, [eas]);
+  }, [accessibleEas]);
 
   const filteredEas = useMemo(() => {
-    return eas.filter((e) => {
+    return accessibleEas.filter((e) => {
       const matchesSearch =
         e.name.toLowerCase().includes(search.toLowerCase()) ||
         e.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -117,7 +136,7 @@ export function KanoEaWorkspace({
       const matchesStatus = selectedStatus === 'all' || e.status === selectedStatus;
       return matchesSearch && matchesLga && matchesStatus;
     });
-  }, [eas, search, selectedLga, selectedStatus]);
+  }, [accessibleEas, search, selectedLga, selectedStatus]);
 
   const handleSelectEa = (ea: EnumerationArea) => {
     setSelectedEa(ea);
@@ -260,13 +279,30 @@ export function KanoEaWorkspace({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Showing {filteredEas.length} of {eas.length} EAs</span>
+                  <span>Showing {filteredEas.length} of {accessibleEas.length} accessible EAs</span>
                 </div>
               </div>
 
               {/* EA Items List */}
               <div className="flex-1 overflow-y-auto divide-y divide-border">
-                {filteredEas.map((ea) => {
+                {filteredEas.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-muted-foreground font-mono space-y-2">
+                    <Building2 className="size-8 mx-auto text-muted-foreground/50 mb-2" />
+                    <p className="font-semibold text-foreground">
+                      {accessibleEas.length === 0
+                        ? (isHausa ? 'Babu Rukunin EAs da aka baka' : 'No Enumeration Areas Assigned')
+                        : (isHausa ? 'Babu sakamako' : 'No matching EAs found')}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {accessibleEas.length === 0
+                        ? (isHausa
+                            ? 'Ba a sanya muku ko wanne EA ba tukuna. Tuntuɓi mai kula da ku (Supervisor).'
+                            : 'You have not been assigned any EAs yet. Please contact your field supervisor.')
+                        : (isHausa ? 'Gwada canza rubutun bincike ko tace LGA.' : 'Try adjusting your search or filters.')}
+                    </p>
+                  </div>
+                ) : (
+                  filteredEas.map((ea) => {
                   const isSelected = selectedEa?.id === ea.id;
                   const pct = Math.round((ea.completedHouseholds / ea.targetHouseholds) * 100);
 
@@ -323,7 +359,7 @@ export function KanoEaWorkspace({
                       </div>
                     </button>
                   );
-                })}
+                }))}
               </div>
             </aside>
 

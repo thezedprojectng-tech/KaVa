@@ -1,49 +1,33 @@
 -- ==============================================================================
--- KaVa: Bootstrap First Administrator Account
--- Doctors Medical Aid Foundation (DMAF) â€” Kano State, Nigeria
+-- KaVa: Bootstrap Administrator Account
+-- Doctors Medical Aid Foundation (DMAF) — Kano State, Nigeria
 -- ==============================================================================
--- Run this in the Supabase Dashboard SQL Editor to grant admin access
--- or bootstrap the primary study coordinator account.
+-- 1. First, create your user in Supabase Dashboard:
+--    Authentication -> Users -> 'Add user' (e.g. your real work/org email)
+--
+-- 2. Then run this query in SQL Editor, replacing 'admin@example.com' with that email:
 
--- 1. Create the user in auth.users if not already created via Auth UI
--- Note: Replace 'your-coordinator-uuid-here' with the actual auth.users id
--- generated in Supabase Dashboard -> Authentication -> Users -> 'Add user'
-
--- Example bootstrap profile insertion:
 insert into public.profiles (
   id,
   role,
   full_name,
   email,
-  phone,
-  assigned_lgas,
-  assigned_eas,
-  status,
-  created_at,
-  updated_at
+  status
 )
-values (
-  '00000000-0000-0000-0000-000000000001', -- Replace with your auth.users.id
+select
+  u.id,
   'admin',
-  'Dr. Amina Sabu (Study Coordinator)',
-  'coordinator@dmaf-kassep.org',
-  '0800 000 0001',
-  array[
-    'Kano Municipal', 'Dala', 'Fagge', 'Gwale', 'Tarauni',
-    'Nassarawa', 'Kumbotso', 'Ungogo', 'Bichi', 'Rano'
-  ],
-  array['All ~140 EAs'],
-  'active',
-  now(),
-  now()
-)
+  coalesce(u.raw_user_meta_data->>'full_name', split_part(u.email, '@', 1)),
+  u.email,
+  'active'
+from auth.users u
+where lower(u.email) = lower('admin@example.com') -- <-- Put the admin's email here
 on conflict (id) do update set
-  role = 'admin',
-  full_name = excluded.full_name,
-  email = excluded.email,
-  status = 'active',
+  role       = 'admin',
+  status     = 'active',
   updated_at = now();
 
--- Verify profile:
-select id, role, full_name, email, status from public.profiles where role = 'admin';
-
+-- Verify the admin profile was created successfully
+select id, role, full_name, email, status, created_at
+from public.profiles
+where role = 'admin';

@@ -819,17 +819,18 @@ create trigger trg_audit_profiles
 -- BOOTSTRAP SNIPPET — FIRST ADMIN ACCOUNT
 -- ==============================================================================
 -- Run after creating an admin user via Supabase Auth (Dashboard -> Authentication).
--- Replace '<auth-user-uuid>' with the UUID from auth.users:
+-- Replace 'admin@example.com' with the email of the administrator created in Auth:
 --
 --   insert into public.profiles (id, role, full_name, email, status)
---   values (
---     '<auth-user-uuid>',
+--   select
+--     u.id,
 --     'admin',
---     'Dr. Amina Sabu',
---     'coordinator@dmaf-kassep.org',
+--     coalesce(u.raw_user_meta_data->>'full_name', split_part(u.email, '@', 1)),
+--     u.email,
 --     'active'
---   )
---   on conflict (id) do update
---     set role      = excluded.role,
---         full_name = excluded.full_name,
---         status    = excluded.status;
+--   from auth.users u
+--   where lower(u.email) = lower('admin@example.com')
+--   on conflict (id) do update set
+--     role       = 'admin',
+--     status     = 'active',
+--     updated_at = now();

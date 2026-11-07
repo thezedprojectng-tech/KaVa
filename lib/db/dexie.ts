@@ -6,7 +6,8 @@ import {
   PregnancyRecord,
   BabyRecord,
   ReviewFlag,
-  AuditLogEntry
+  AuditLogEntry,
+  HouseholdVisit
 } from '@/types/survey';
 import { EnumerationArea, UserProfile } from '@/types/auth';
 
@@ -48,6 +49,7 @@ export class KaVaDatabase extends Dexie {
   review_flags!: Table<ReviewFlag, string>;
   audit_logs!: Table<AuditLogEntry, string>;
   active_drafts!: Table<ActiveDraft, string>;
+  household_visits!: Table<HouseholdVisit, string>;
   profiles!: Table<UserProfile & { status?: 'active' | 'inactive'; created_at?: string }, string>;
 
   constructor() {
@@ -66,6 +68,10 @@ export class KaVaDatabase extends Dexie {
     // version 2: adds profiles store for offline user cache
     this.version(2).stores({
       profiles: 'id, role, email, status',
+    });
+    // version 3: adds household_visits store for visit attempts tracking (A10/A11)
+    this.version(3).stores({
+      household_visits: 'id, assessment_hh_id, ea_id, interviewer_id, visited_at'
     });
   }
 }

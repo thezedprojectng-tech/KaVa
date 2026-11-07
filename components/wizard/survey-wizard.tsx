@@ -32,8 +32,11 @@ import {
   Sparkles,
   ShieldCheck,
   Building2,
-  HeartPulse
+  HeartPulse,
+  ShieldAlert
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/auth-context';
+import { userHasEaAccess } from '@/lib/auth/ea-access';
 import { cn } from '@/lib/utils';
 
 interface SurveyWizardProps {
@@ -388,6 +391,31 @@ export function SurveyWizard({
   const sectionAGroup3 = sectionAItems.slice(14); // A15 - A21
 
   const progressPct = Math.round(((currentStep + 1) / 7) * 100);
+
+  const { user } = useAuth();
+  const currentEaCode = householdData.ea_id || initialEaCode;
+  const hasAccess = userHasEaAccess(user, { code: currentEaCode, lga: householdData.lga_code || '' });
+
+  if (!hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 max-w-md mx-auto my-12 text-center bg-card border border-destructive/20 rounded-xl shadow-xs">
+        <div className="p-3 rounded-full bg-destructive/10 text-destructive mb-3">
+          <ShieldAlert className="size-8" />
+        </div>
+        <h2 className="text-base font-semibold text-foreground mb-1">
+          {isHausa ? 'Babu Izinin Bincike a Wannan EA' : 'EA Access Restricted'}
+        </h2>
+        <p className="text-xs text-muted-foreground font-mono leading-relaxed mb-6">
+          {isHausa
+            ? `Ba a ba ku izinin gudanar da bincike a EA ${currentEaCode} ba. Ma'aikata masu bincike (Interviewers) suna iya gudanar da aiki a rukunin EAs da aka basu izini kawai.`
+            : `You are not authorized to conduct interviews in Enumeration Area ${currentEaCode}. Field Interviewers are restricted to their assigned EAs (${user.assignedEas?.join(', ') || 'None assigned'}).`}
+        </p>
+        <Button size="sm" onClick={onComplete} variant="outline" className="text-xs">
+          {isHausa ? 'Koma Shafin EAs' : 'Return to EA Workspace'}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto py-6 px-4 space-y-6 pb-28">

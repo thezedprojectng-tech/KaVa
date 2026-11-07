@@ -159,6 +159,18 @@ export interface BabyRecord {
   updated_at: string;
 }
 
+export interface HouseholdVisit {
+  id?: string;
+  household_id: string;
+  assessment_hh_id: string;
+  ea_id: string;
+  visit_number: number;
+  visit_result: number;
+  visited_at: string;
+  interviewer_id: string;
+  notes?: string | null;
+}
+
 export interface ReviewFlag {
   id: string;
   type: 'duplicate' | 'mismatch' | 'referral_stillbirth' | 'referral_maternal_death' | 'inconsistency' | 'eligibility_review' | 'supervisor_followup';

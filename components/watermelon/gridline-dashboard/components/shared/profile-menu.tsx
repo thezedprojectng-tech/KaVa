@@ -22,14 +22,12 @@ export function ProfileMenu({
   placement: "sidebar" | "topbar";
   className?: string;
 }) {
-  const { user, role, setRole, language, setLanguage } = useAuth();
+  const { user, role, setRole, language, setLanguage, signOut } = useAuth();
   const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   const handleSignOut = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
-    // Clear any locally-persisted theme preference and reload to login
+    await signOut();
+    // Clear any locally-persisted theme preference and reload
     window.location.href = '/';
   };
 

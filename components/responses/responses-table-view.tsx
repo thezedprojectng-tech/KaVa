@@ -26,6 +26,7 @@ import {
   Lock,
   Database
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/auth-context';
 import { cn } from '@/lib/utils';
 
 interface ResponsesTableViewProps {
@@ -39,6 +40,7 @@ export function ResponsesTableView({
 }: ResponsesTableViewProps) {
   const isHausa = language === 'ha';
   const isAdmin = role === 'admin';
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'households' | 'women' | 'deaths' | 'pregnancies' | 'babies'>('households');
   const [isIdentified, setIsIdentified] = useState<boolean>(false);
@@ -60,18 +62,47 @@ export function ResponsesTableView({
       surveySyncService.getPregnancies(),
       surveySyncService.getBabies()
     ]);
+
+    // Apply role-based filtering:
+    // - Admin: all records
+    // - Supervisor: records in assigned LGAs or EAs
+    // - Interviewer: strictly own records / assigned EAs
+    let filteredHh = hh;
+    if (role === 'interviewer') {
+      const assignedEas = user.assignedEas || [];
+      filteredHh = hh.filter(
+        (h) => h.interviewer_id === user.id || (h.ea_code && assignedEas.includes(h.ea_code))
+      );
+    } else if (role === 'supervisor') {
+      const assignedLgas = user.assignedLgas || [];
+      const assignedEas = user.assignedEas || [];
+      if (!assignedLgas.includes('All LGAs')) {
+        filteredHh = hh.filter(
+          (h) =>
+            (h.ea_code && assignedEas.includes(h.ea_code)) ||
+            (h.lga_code && assignedLgas.includes(h.lga_code))
+        );
+      }
+    }
+
+    const allowedHhIds = new Set(filteredHh.map((h) => h.assessment_hh_id));
+    const filteredW = role === 'admin' ? w : w.filter((x) => allowedHhIds.has(x.assessment_hh_id));
+    const filteredD = role === 'admin' ? det : det.filter((x) => allowedHhIds.has(x.assessment_hh_id));
+    const filteredP = role === 'admin' ? p : p.filter((x) => allowedHhIds.has(x.assessment_hh_id));
+    const filteredB = role === 'admin' ? b : b.filter((x) => allowedHhIds.has(x.assessment_hh_id));
+
     setDataset({
-      households: hh,
-      women: w,
-      deaths: det,
-      pregnancies: p,
-      babies: b
+      households: filteredHh,
+      women: filteredW,
+      deaths: filteredD,
+      pregnancies: filteredP,
+      babies: filteredB
     });
   };
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user, role]);
 
   const handleExport = () => {
     downloadKassepExcel(dataset, isIdentified && isAdmin);

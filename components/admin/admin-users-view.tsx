@@ -61,7 +61,7 @@ export function AdminUsersView({
   const isSupervisor = currentRole === 'supervisor';
   const isInterviewer = currentRole === 'interviewer';
 
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   const [staffList, setStaffList] = useState<UserProfile[]>([]);
@@ -297,6 +297,11 @@ export function AdminUsersView({
       setStaffList((prev) =>
         prev.map((s) => (s.id === staff.id ? { ...s, status: newStatus } : s))
       );
+
+      // If current active user was deactivated, trigger sign-out / blocking immediately
+      if (staff.id === user.id) {
+        setUser((prev) => ({ ...prev, status: newStatus }));
+      }
     } catch (err) {
       console.error('Failed to toggle status:', err);
     }
@@ -527,15 +532,18 @@ export function AdminUsersView({
 
                           <Button
                             size="sm"
-                            variant="ghost"
+                            variant="outline"
                             onClick={() => handleToggleStatus(staff)}
                             className={cn(
-                              'h-7 text-xs px-1.5',
-                              isInactive ? 'text-emerald-600 hover:text-emerald-700' : 'text-muted-foreground hover:text-destructive'
+                              'h-7 text-xs font-mono px-2 transition-colors',
+                              isInactive
+                                ? 'text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-700'
+                                : 'text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive'
                             )}
-                            title={isInactive ? 'Reactivate User' : 'Deactivate User'}
+                            title={isInactive ? 'Activate User' : 'Deactivate User'}
                           >
-                            <Power className="size-3" />
+                            <Power className="size-3 mr-1" />
+                            <span>{isInactive ? 'Activate' : 'Deactivate'}</span>
                           </Button>
                         </div>
                       ) : (
